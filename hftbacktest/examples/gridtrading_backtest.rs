@@ -10,6 +10,7 @@ use hftbacktest::{
             CommonFees,
             IntpOrderLatency,
             PowerProbQueueFunc3,
+            ConstantLatency,
             ProbQueueModel,
             TradingValueFeeModel,
         },
@@ -21,17 +22,15 @@ use hftbacktest::{
 mod algo;
 
 fn prepare_backtest() -> Backtest<HashMapMarketDepth> {
-    let latency_data = (20240501..20240532)
-        .map(|date| DataSource::File(format!("latency_{date}.npz")))
-        .collect();
+    // let latency_data = (20240501..20240532)
+    //     .map(|date| DataSource::File(format!("latency_{date}.npz")))
+    //     .collect();
 
-    let latency_model = IntpOrderLatency::new(latency_data, 0);
+    let latency_model = ConstantLatency::new(5, 5);
     let asset_type = LinearAsset::new(1.0);
     let queue_model = ProbQueueModel::new(PowerProbQueueFunc3::new(3.0));
 
-    let data = (20240501..20240532)
-        .map(|date| DataSource::File(format!("1000SHIBUSDT_{date}.npz")))
-        .collect();
+    let data = vec![DataSource::File("s3://angelone-imm-dev/validated/AONETOTAL/2025/06/02/orders_2025-06-02.npz".parse().unwrap())];
 
     let hbt = Backtest::builder()
         .add_asset(
@@ -44,9 +43,6 @@ fn prepare_backtest() -> Backtest<HashMapMarketDepth> {
                 .queue_model(queue_model)
                 .depth(|| {
                     let mut depth = HashMapMarketDepth::new(0.000001, 1.0);
-                    depth.apply_snapshot(
-                        &read_npz_file("1000SHIBUSDT_20240501_SOD.npz", "data").unwrap(),
-                    );
                     depth
                 })
                 .build()
